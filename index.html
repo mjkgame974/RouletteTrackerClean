@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roulette Tracker Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0f;
+            color: white;
+            overflow: hidden;
+        }
+
+        #root {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+        }
+
+        .app-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .screen-section {
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(194, 65, 12, 0.3) 100%);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+            position: relative;
+            user-select: none;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 8px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.playing {
+            background: #ef4444;
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .timer-display {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .timer-label {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 4px;
+        }
+
+        .timer-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #60a5fa;
+            text-shadow: 0 0 12px rgba(96, 165, 250, 0.5);
+            font-family: 'SF Mono', monospace;
+        }
+
+        .date-time {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: center;
+        }
+
+        .tracker-section {
+            background: rgba(17, 24, 39, 0.6);
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            user-select: none;
+        }
+
+        .tracker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .tracker-title {
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .reset-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .reset-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .tracker-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .tracker-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .tracker-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .tracker-label.active {
+            color: white;
+        }
+
+        .tracker-checkbox {
+            width: 22px;
+            height: 22px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .tracker-checkbox:hover {
+            transform: scale(1.1);
+        }
+
+        .tracker-checkbox.active {
+            border: none;
+        }
+
+        .tracker-checkbox.disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .tracker-checkbox.active.green {
+            background: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+        }
+
+        .tracker-checkbox.active.yellow {
+            background: #facc15;
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
+        }
+
+        .tracker-checkbox.active.orange {
+            background: #f97316;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.6);
+        }
+
+        .tracker-checkbox.active.red {
+            background: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+        }
+
+        .tracker-checkbox.active.purple {
+            background: #9333ea;
+            box-shadow: 0 0 10px rgba(147, 51, 234, 0.6);
+        }
+
+        .controls-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 50px;  /* ← Changé de 8px à 50px */
+}
+
+        .button-row {
+            display: flex;
+            gap: 8px;
+            user-select: none;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 3px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-start:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.6);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 3px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.6);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .input-group {
+            flex: 1;
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        .input-label {
+            font-size: 8px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 4px;
+            user-select: none;
+        }
+
+        .input-field {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            outline: none;
+        }
+
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        .gain-display {
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            user-select: none;
+        }
+
+        .gain-label {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 5px;
+        }
+
+        .gain-value {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .gain-value.positive {
+            color: #10b981;
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .gain-value.negative {
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .refresh-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 8px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
+            border: 2px solid rgba(59, 130, 246, 0.5);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .refresh-btn:hover:not(.disabled) {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(139, 92, 246, 0.5));
+            transform: rotate(180deg);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+        }
+
+        .refresh-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: auto;
+            user-select: none;
+        }
+
+        .footer-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .version {
+            font-size: 8px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .powered-by {
+            font-size: 8px;
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .powered-by:hover {
+            color: rgba(59, 130, 246, 0.8);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 14px;
+            width: 90%;
+            max-width: 320px;
+            max-height: 50vh;
+            overflow-y: auto;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .modal-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .clear-all-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .clear-all-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+        }
+
+        .close-btn:hover {
+            color: white;
+        }
+
+        .history-item {
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-date {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .history-duration {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .history-gain {
+            font-size: 11px;
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        .history-gain.positive {
+            color: #10b981;
+        }
+
+        .history-gain.negative {
+            color: #ef4444;
+        }
+
+        .delete-history-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .delete-history-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 20px 10px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        const { shell } = require('electron');
+        
+        const SEQUENCE = [1, 1, 1, 2, 2, 3, 4, 5, 7, 9, 12, 16, 21, 28, 37, 49, 65, 86, 114];
+
+        let state = {
+            now: new Date(),
+            gameState: 'IDLE',
+            startSum: '',
+            finalSum: '',
+            startTime: null,
+            endTime: null,
+            elapsedSeconds: 0,
+            trackerIndices: new Array(SEQUENCE.length).fill(false),
+            showHistory: false,
+            history: JSON.parse(localStorage.getItem('rouletteHistory') || '[]')
+        };
+
+        setInterval(() => {
+            state.now = new Date();
+            updateTimeDisplay();
+        }, 1000);
+
+        let stopwatchInterval;
+
+        function startStopwatch() {
+            stopwatchInterval = setInterval(() => {
+                state.elapsedSeconds++;
+                updateTimeDisplay();
+            }, 1000);
+        }
+
+        function stopStopwatch() {
+            clearInterval(stopwatchInterval);
+        }
+
+        function handleStart() {
+            if (!state.startSum) return;
+            state.startTime = new Date();
+            state.gameState = 'PLAYING';
+            state.elapsedSeconds = 0;
+            state.trackerIndices = new Array(SEQUENCE.length).fill(false);
+            state.finalSum = '';
+            state.endTime = null;
+            startStopwatch();
+            render();
+        }
+
+        function handleStop() {
+            state.endTime = new Date();
+            state.gameState = 'FINISHED';
+            stopStopwatch();
+            
+            if (state.startTime && state.endTime && state.startSum && state.finalSum) {
+                const start = parseFloat(state.startSum);
+                const final = parseFloat(state.finalSum);
+                const gain = final - start;
+
+                const newSession = {
+                    id: Date.now().toString(),
+                    date: new Date().toISOString(),
+                    startTime: state.startTime.toISOString(),
+                    endTime: state.endTime.toISOString(),
+                    durationSeconds: state.elapsedSeconds,
+                    startSum: start,
+                    finalSum: final,
+                    gain: gain
+                };
+
+                state.history = [newSession, ...state.history];
+                localStorage.setItem('rouletteHistory', JSON.stringify(state.history));
+            }
+            
+            render();
+        }
+
+        function handleToggleTracker(index) {
+            if (state.gameState !== 'PLAYING') return;
+            state.trackerIndices[index] = !state.trackerIndices[index];
+            updateTrackerDisplay();
+        }
+
+        function handleResetTracker() {
+            state.trackerIndices = new Array(SEQUENCE.length).fill(false);
+            updateTrackerDisplay();
+        }
+
+        function handleInputChange(field, value) {
+            state[field] = value;
+            updateGainDisplay();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                event.target.blur();
+            }
+        }
+
+        function handleNewSession() {
+    if (state.gameState !== 'FINISHED') return;
+    
+    // Sauvegarde automatique dans l'historique AVANT de réinitialiser
+    if (state.startTime && state.endTime && state.startSum && state.finalSum) {
+        const start = parseFloat(state.startSum);
+        const final = parseFloat(state.finalSum);
+        const gain = final - start;
+
+        const newSession = {
+            id: Date.now().toString(),
+            date: new Date().toISOString(),
+            startTime: state.startTime.toISOString(),
+            endTime: state.endTime.toISOString(),
+            durationSeconds: state.elapsedSeconds,
+            startSum: start,
+            finalSum: final,
+            gain: gain
+        };
+
+        // Vérifier si cette session n'est pas déjà dans l'historique
+        const alreadyExists = state.history.some(session => 
+            session.startTime === newSession.startTime && 
+            session.endTime === newSession.endTime
+        );
+
+        if (!alreadyExists) {
+            state.history = [newSession, ...state.history];
+            localStorage.setItem('rouletteHistory', JSON.stringify(state.history));
+        }
+    }
+    
+    // Réinitialiser l'interface
+    state.gameState = 'IDLE';
+    state.startSum = '';
+    state.finalSum = '';
+    state.startTime = null;
+    state.endTime = null;
+    state.elapsedSeconds = 0;
+    state.trackerIndices = new Array(SEQUENCE.length).fill(false);
+    render();
+}
+
+        function handleDeleteHistory(id) {
+            state.history = state.history.filter(session => session.id !== id);
+            localStorage.setItem('rouletteHistory', JSON.stringify(state.history));
+            render();
+        }
+
+        function handleClearAllHistory() {
+            if (confirm('Êtes-vous sûr de vouloir supprimer tout l\'historique ?')) {
+                state.history = [];
+                localStorage.setItem('rouletteHistory', JSON.stringify(state.history));
+                render();
+            }
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+        }
+
+        function formatDuration(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            if (h > 0) return `${h}h ${m}m ${s}s`;
+            return `${m}m ${s}s`;
+        }
+
+        function formatTimerDisplay(seconds) {
+            return new Date(seconds * 1000).toISOString().substr(11, 8);
+        }
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return `${formatDate(date)} ${formatTime(date)}`;
+        }
+
+        function getColorClass(index) {
+            if (index < 5) return 'green';
+            if (index < 9) return 'yellow';
+            if (index < 13) return 'orange';
+            if (index < 17) return 'red';
+            return 'purple';
+        }
+
+        function openMediaTeazer() {
+            shell.openExternal('https://www.mediateazer.net');
+        }
+
+        function updateTimeDisplay() {
+            const timerElem = document.querySelector('.timer-value');
+            if (timerElem) {
+                timerElem.textContent = formatTimerDisplay(state.elapsedSeconds);
+            }
+
+            const dateTimeElem = document.querySelector('.date-time');
+            if (dateTimeElem) {
+                dateTimeElem.textContent = `${formatDate(state.now)} - ${formatTime(state.now)}`;
+            }
+        }
+
+        function updateTrackerDisplay() {
+            SEQUENCE.forEach((value, i) => {
+                const checkbox = document.querySelector(`[data-tracker-index="${i}"]`);
+                const label = document.querySelector(`[data-tracker-label="${i}"]`);
+                if (checkbox && label) {
+                    if (state.trackerIndices[i]) {
+                        checkbox.classList.add('active', getColorClass(i));
+                        checkbox.textContent = '✓';
+                        label.classList.add('active');
+                    } else {
+                        checkbox.classList.remove('active', 'green', 'yellow', 'orange', 'red', 'purple');
+                        checkbox.textContent = '';
+                        label.classList.remove('active');
+                    }
+                }
+            });
+        }
+
+        function updateGainDisplay() {
+            const calculatedGain = (state.startSum && state.finalSum) 
+                ? parseFloat(state.finalSum) - parseFloat(state.startSum) 
+                : null;
+
+            const gainValueElem = document.querySelector('.gain-value');
+            if (gainValueElem) {
+                if (calculatedGain !== null) {
+                    gainValueElem.textContent = (calculatedGain > 0 ? '+' : '') + formatCurrency(calculatedGain);
+                    gainValueElem.className = `gain-value ${calculatedGain >= 0 ? 'positive' : 'negative'}`;
+                } else {
+                    gainValueElem.textContent = '---';
+                    gainValueElem.className = 'gain-value';
+                }
+            }
+        }
+
+        function render() {
+            const calculatedGain = (state.startSum && state.finalSum) 
+                ? parseFloat(state.finalSum) - parseFloat(state.startSum) 
+                : null;
+
+            const root = document.getElementById('root');
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="screen-section">
+                        <div class="status-indicator">
+                            <div class="status-dot ${state.gameState === 'PLAYING' ? 'playing' : ''}"></div>
+                            <span>${state.gameState === 'PLAYING' ? 'Active' : 'Ready'}</span>
+                        </div>
+                        <div class="timer-display">
+                            <div class="timer-label">SESSION TIMER</div>
+                            <div class="timer-value">${formatTimerDisplay(state.elapsedSeconds)}</div>
+                        </div>
+                        <div class="date-time">${formatDate(state.now)} - ${formatTime(state.now)}</div>
+                    </div>
+
+                    <div class="tracker-section">
+                        <div class="tracker-header">
+                            <div class="tracker-title">Progression</div>
+                            <button class="reset-btn" onclick="handleResetTracker()">Reset cases</button>
+                        </div>
+                        <div class="tracker-grid">
+                            ${SEQUENCE.map((value, i) => `
+                                <div class="tracker-item">
+                                    <div class="tracker-label ${state.trackerIndices[i] ? 'active' : ''}" data-tracker-label="${i}">${value}</div>
+                                    <div class="tracker-checkbox ${state.trackerIndices[i] ? 'active ' + getColorClass(i) : ''} ${state.gameState !== 'PLAYING' ? 'disabled' : ''}" 
+                                         data-tracker-index="${i}"
+                                         onclick="handleToggleTracker(${i})">
+                                        ${state.trackerIndices[i] ? '✓' : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="controls-section">
+                        <div class="button-row">
+                            <button class="btn btn-start" onclick="handleStart()" ${state.gameState !== 'IDLE' ? 'disabled' : ''}>
+                                ▶ Start
+                            </button>
+                            <button class="btn btn-stop" onclick="handleStop()" ${state.gameState !== 'PLAYING' ? 'disabled' : ''}>
+                                ■ Stop
+                            </button>
+                        </div>
+
+                        <div class="input-row">
+                            <div class="input-group">
+                                <div class="input-label">DÉPART</div>
+                                <input type="number" 
+                                       id="startSumInput"
+                                       step="0.01"
+                                       class="input-field" 
+                                       value="${state.startSum}" 
+                                       oninput="handleInputChange('startSum', this.value)"
+                                       onkeypress="handleKeyPress(event)"
+                                       ${state.gameState !== 'IDLE' ? 'disabled' : ''}
+                                       placeholder="0.00">
+                            </div>
+                            <div class="input-group">
+                                <div class="input-label">FINALE</div>
+                                <input type="number" 
+                                       id="finalSumInput"
+                                       step="0.01"
+                                       class="input-field" 
+                                       value="${state.finalSum}" 
+                                       oninput="handleInputChange('finalSum', this.value)"
+                                       onkeypress="handleKeyPress(event)"
+                                       ${state.gameState !== 'FINISHED' ? 'disabled' : ''}
+                                       placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <div class="gain-display">
+                            <div class="gain-label">GAIN NET</div>
+                            <div class="gain-value ${calculatedGain !== null ? (calculatedGain >= 0 ? 'positive' : 'negative') : ''}">
+                                ${calculatedGain !== null ? (calculatedGain > 0 ? '+' : '') + formatCurrency(calculatedGain) : '---'}
+                            </div>
+                        </div>
+
+                        <div class="refresh-btn-container">
+                            <div class="refresh-btn ${state.gameState !== 'FINISHED' ? 'disabled' : ''}" 
+                                 onclick="handleNewSession()" 
+                                 title="Nouvelle session">🔄</div>
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        <div class="footer-top">
+                            <div class="version">v1.0.0</div>
+                            <button class="reset-btn" onclick="state.showHistory = true; render()" style="font-size: 8px; padding: 3px 6px;">
+                                History (${state.history.length})
+                            </button>
+                        </div>
+                        <div class="powered-by" onclick="openMediaTeazer()">Powered by MediaTeazer</div>
+                    </div>
+                </div>
+
+                ${state.showHistory ? `
+                    <div class="modal-overlay" onclick="if(event.target === this) { state.showHistory = false; render(); }">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <div class="modal-title">Historique (${state.history.length})</div>
+                                <div class="modal-actions">
+                                    ${state.history.length > 0 ? `<button class="clear-all-btn" onclick="handleClearAllHistory()">Tout supprimer</button>` : ''}
+                                    <button class="close-btn" onclick="state.showHistory = false; render()">×</button>
+                                </div>
+                            </div>
+                            ${state.history.length === 0 ? `
+                                <div class="empty-state">Aucune transaction enregistrée</div>
+                            ` : state.history.map(session => `
+                                <div class="history-item">
+                                    <div class="history-info">
+                                        <div class="history-date">${formatDateTime(session.date)}</div>
+                                        <div class="history-duration">${formatDuration(session.durationSeconds)}</div>
+                                    </div>
+                                    <div class="history-gain ${session.gain >= 0 ? 'positive' : 'negative'}">
+                                        ${session.gain > 0 ? '+' : ''}${formatCurrency(session.gain)}
+                                    </div>
+                                    <button class="delete-history-btn" onclick="handleDeleteHistory('${session.id}')">🗑️</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        render();
+    </script>
+</body>
+</html>
